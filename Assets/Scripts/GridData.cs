@@ -8,6 +8,23 @@ public class GridData
 
     private readonly bool[,,] cells;
 
+    public bool IsRowFull(int y, int z)
+    {
+        for (int x = 0; x < Width; x++)
+            if (!cells[x, y, z]) return false;
+        return true;
+    }
+
+    // Remove a linha e desce tudo que estava acima, na mesma camada Z.
+    public void RemoveRow(int y, int z)
+    {
+        for (int yy = y; yy < Height - 1; yy++)
+            for (int x = 0; x < Width; x++)
+                cells[x, yy, z] = cells[x, yy + 1, z];
+
+        for (int x = 0; x < Width; x++)
+            cells[x, Height - 1, z] = false;
+    }
     public GridData(int width, int height, int depth)
     {
         Width = width;
