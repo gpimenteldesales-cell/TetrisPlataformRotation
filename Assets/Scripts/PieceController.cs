@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 public class PieceController : MonoBehaviour
 {
-    [Header("Refer�ncias")]
+    [Header("Referências")]
     [Tooltip("Ordem: I, O, T, S, Z, J, L")]
     [SerializeField] private Material[] pieceMaterials = new Material[7];
 
@@ -12,6 +12,9 @@ public class PieceController : MonoBehaviour
     [SerializeField] private float softDropInterval = 0.05f;
 
     public event System.Action<GridManager> PieceLocked;
+
+    // Ligado pelo TouchControls enquanto o dedo está segurando (queda suave).
+    public bool SoftDrop { get; set; }
 
     private GridManager activeGrid;
     private GridBlockView view;
@@ -24,7 +27,7 @@ public class PieceController : MonoBehaviour
     private float timer;
     private bool active;
 
-    // Chamado pelo GameManager: define o lado e faz nascer a pe�a nele.
+    // Chamado pelo GameManager: define o lado e faz nascer a peça nele.
     public void BeginPiece(GridManager grid)
     {
         activeGrid = grid;
@@ -32,28 +35,44 @@ public class PieceController : MonoBehaviour
         Spawn();
     }
 
+    // --- Controles externos (toque / botões de UI) ---
+    public void MoveLeft() { if (active) TryMove(Vector3Int.left); }
+    public void MoveRight() { if (active) TryMove(Vector3Int.right); }
+    public void Rotate(bool clockwise = true) { if (active) TryRotate(clockwise); }
+
+    public void HardDrop()
+    {
+        if (!active) return;
+        while (TryMove(Vector3Int.down)) { }
+        Lock();
+    }
+
     private void Update()
     {
         if (!active) return;
+
+        // No celular não existe teclado (Keyboard.current é null), então o
+        // teclado é opcional e a queda automática roda sempre.
         Keyboard kb = Keyboard.current;
-        if (kb == null) return;
-
-        if (kb.aKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) TryMove(Vector3Int.left);
-        if (kb.dKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) TryMove(Vector3Int.right);
-        if (kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame) TryMove(new Vector3Int(0, 0, 1));
-        if (kb.sKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame) TryMove(new Vector3Int(0, 0, -1));
-        if (kb.eKey.wasPressedThisFrame) TryRotate(true);
-        if (kb.qKey.wasPressedThisFrame) TryRotate(false);
-
-        if (kb.spaceKey.wasPressedThisFrame)
+        if (kb != null)
         {
-            while (TryMove(Vector3Int.down)) { }
-            Lock();
-            return;
+            if (kb.aKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) TryMove(Vector3Int.left);
+            if (kb.dKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) TryMove(Vector3Int.right);
+            if (kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame) TryMove(new Vector3Int(0, 0, 1));
+            if (kb.sKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame) TryMove(new Vector3Int(0, 0, -1));
+            if (kb.eKey.wasPressedThisFrame) TryRotate(true);
+            if (kb.qKey.wasPressedThisFrame) TryRotate(false);
+
+            if (kb.spaceKey.wasPressedThisFrame)
+            {
+                HardDrop();
+                return;
+            }
         }
 
         timer += Time.deltaTime;
-        float interval = kb.leftShiftKey.isPressed ? softDropInterval : fallInterval;
+        bool soft = SoftDrop || (kb != null && kb.leftShiftKey.isPressed);
+        float interval = soft ? softDropInterval : fallInterval;
         if (timer >= interval)
         {
             timer = 0f;
@@ -71,7 +90,7 @@ public class PieceController : MonoBehaviour
         if (!IsValid(origin, cells))
         {
             active = false;
-            Debug.Log("Sem espa�o para nova pe�a (fim de jogo neste lado).");
+            Debug.Log("Sem espaço para nova peça (fim de jogo neste lado).");
             return;
         }
 
@@ -132,6 +151,7 @@ public class PieceController : MonoBehaviour
     private void Lock()
     {
         active = false; // espera a plataforma girar
+        SoftDrop = false; // a próxima peça não nasce já em queda rápida
 
         for (int i = 0; i < cubes.Length; i++)
         {
