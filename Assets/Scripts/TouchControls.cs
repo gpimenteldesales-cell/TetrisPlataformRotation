@@ -1,99 +1,98 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
-// Controles por toque para o PieceController.
-//   Arrastar para os lados ... move a peça (uma casa a cada "moveStep" da largura da tela)
-//   Toque rápido ............. gira a peça
-//   Deslizar para baixo ...... queda instantânea
-//   Segurar parado ........... queda suave enquanto o dedo estiver na tela
-// Também funciona com o mouse no Editor (Pointer.current cobre mouse e toque).
+/// <summary>
+/// Lê gestos de toque e dispara eventos. Não conhece o PieceController:
+/// a ligação é feita por UnityEvents, mantendo o código modular.
+/// </summary>
 public class TouchControls : MonoBehaviour
 {
-    [SerializeField] private PieceController pieceController;
+    [Header("Sensibilidade (em polegadas, independe da resolução)")]
+    [SerializeField] private float stepInches = 0.3f;     // arrasto por célula
+    [SerializeField] private float tapMaxInches = 0.1f;   // movimento máximo para contar como toque
+    [SerializeField] private float tapMaxTime = 0.2f;
+    [SerializeField] private float flickMinInches = 0.6f; // distância mínima do flick para baixo
+    [SerializeField] private float flickMaxTime = 0.25f;
 
-    [Header("Gestos (em % da tela)")]
-    [Tooltip("Arraste horizontal, em % da largura, para mover 1 casa.")]
-    [SerializeField, Range(0.03f, 0.25f)] private float moveStep = 0.08f;
-    [Tooltip("Deslize vertical, em % da altura, para a queda instantânea.")]
-    [SerializeField, Range(0.05f, 0.5f)] private float dropSwipe = 0.12f;
-    [Tooltip("Quanto o dedo pode andar (em % da largura) e ainda contar como toque.")]
-    [SerializeField, Range(0.005f, 0.08f)] private float tapMaxMove = 0.03f;
+    [Header("Eventos")]
+    public UnityEvent OnMoveLeft;
+    public UnityEvent OnMoveRight;
+    public UnityEvent<bool> OnSoftDropHeld;   // true ao começar a puxar para baixo, false ao soltar
+    public UnityEvent OnRotate;
+    public UnityEvent OnHardDrop;
 
-    [Header("Tempos (segundos)")]
-    [SerializeField] private float tapMaxTime = 0.25f;
-    [SerializeField] private float holdTime = 0.35f;
-
-    private bool tracking;
-    private bool moved;
-    private bool holding;
-    private bool ignoreRest;
-    private Vector2 startPos;
-    private float anchorX;
+    private Vector2 startPos, anchorPos;
     private float startTime;
+    private bool moved;
+    private bool softHeld;
+
+    private float Dpi => Screen.dpi > 0 ? Screen.dpi : 160f;
 
     private void Update()
     {
-        Pointer pointer = Pointer.current;
-        if (pointer == null || pieceController == null) return;
+        var screen = Touchscreen.current;
+        if (screen == null) return;
 
-        Vector2 pos = pointer.position.ReadValue();
+        var touch = screen.primaryTouch;
 
-        if (pointer.press.wasPressedThisFrame)
+        if (touch.press.wasPressedThisFrame)
         {
-            tracking = true;
+            startPos = anchorPos = touch.position.ReadValue();
+            startTime = Time.unscaledTime;
             moved = false;
-            holding = false;
-            ignoreRest = false;
-            startPos = pos;
-            anchorX = pos.x;
-            startTime = Time.time;
         }
-
-        if (!tracking) return;
-
-        if (pointer.press.isPressed && !ignoreRest)
+        else if (touch.press.isPressed)
         {
-            float w = Screen.width;
-            float h = Screen.height;
-            Vector2 delta = pos - startPos;
-
-            if (!moved && delta.magnitude > tapMaxMove * w) moved = true;
-
-            // Mover para os lados (várias casas se o dedo andar bastante).
-            float step = moveStep * w;
-            while (pos.x - anchorX >= step) { pieceController.MoveRight(); anchorX += step; }
-            while (anchorX - pos.x >= step) { pieceController.MoveLeft(); anchorX -= step; }
-
-            // Deslizar para baixo: queda instantânea.
-            if (-delta.y >= dropSwipe * h && Mathf.Abs(delta.y) > Mathf.Abs(delta.x))
-            {
-                pieceController.HardDrop();
-                ignoreRest = true; // ignora o resto do gesto (a próxima peça só nasce depois do giro)
-                pieceController.SoftDrop = false;
-                holding = false;
-            }
-            // Segurar parado: queda suave.
-            else if (!moved && !holding && Time.time - startTime >= holdTime)
-            {
-                holding = true;
-                pieceController.SoftDrop = true;
-            }
+            HandleDrag(touch.position.ReadValue());
         }
-
-        if (pointer.press.wasReleasedThisFrame)
+        else if (touch.press.wasReleasedThisFrame)
         {
-            bool isTap = !moved && !holding && !ignoreRest && Time.time - startTime <= tapMaxTime;
-            if (isTap) pieceController.Rotate(true);
-
-            pieceController.SoftDrop = false;
-            holding = false;
-            tracking = false;
+            HandleRelease(touch.position.ReadValue());
         }
     }
 
-    private void OnDisable()
+    private void HandleDrag(Vector2 pos)
     {
-        if (pieceController != null) pieceController.SoftDrop = false;
-        tracking = false;
+        float step = stepInches * Dpi;
+        Vector2 delta = pos - anchorPos;
+
+        if (Mathf.Abs(delta.x) >= step && Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+        {
+            if (delta.x > 0) OnMoveRight?.Invoke(); else OnMoveLeft?.Invoke();
+            anchorPos.x = pos.x;
+            moved = true;
+        }
+        else if (-delta.y >= step && Mathf.Abs(delta.y) > Mathf.Abs(delta.x))
+        {
+            if (!softHeld)
+            {
+                softHeld = true;
+                OnSoftDropHeld?.Invoke(true);
+            }
+            anchorPos.y = pos.y;
+            moved = true;
+        }
+    }
+
+    private void HandleRelease(Vector2 endPos)
+    {
+        if (softHeld)
+        {
+            softHeld = false;
+            OnSoftDropHeld?.Invoke(false);
+        }
+
+        Vector2 total = endPos - startPos;
+        float time = Time.unscaledTime - startTime;
+        float dpi = Dpi;
+
+        bool isTap = !moved && total.magnitude < tapMaxInches * dpi && time < tapMaxTime;
+        bool isFlickDown = -total.y > flickMinInches * dpi
+                           && Mathf.Abs(total.y) > Mathf.Abs(total.x)
+                           && time < flickMaxTime;
+
+        if (isTap) OnRotate?.Invoke();
+        else if (isFlickDown) OnHardDrop?.Invoke();
     }
 }

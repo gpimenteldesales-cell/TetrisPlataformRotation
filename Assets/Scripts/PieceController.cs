@@ -13,6 +13,10 @@ public class PieceController : MonoBehaviour
 
     public event System.Action<GridManager> PieceLocked;
 
+    // Disparado quando a peça nova não cabe no lado (fim de jogo naquele lado).
+    // Quem decide o que fazer é o GameManager.
+    public event System.Action<GridManager> SpawnBlocked;
+
     // Ligado pelo TouchControls enquanto o dedo está segurando (queda suave).
     public bool SoftDrop { get; set; }
 
@@ -39,6 +43,21 @@ public class PieceController : MonoBehaviour
     public void MoveLeft() { if (active) TryMove(Vector3Int.left); }
     public void MoveRight() { if (active) TryMove(Vector3Int.right); }
     public void Rotate(bool clockwise = true) { if (active) TryRotate(clockwise); }
+
+    // Versão sem parâmetro, para aparecer na lista do Inspector (UnityEvent).
+    public void RotateCW() { Rotate(true); }
+
+    // Usado no reinício: descarta a peça em queda (se houver) sem fixá-la.
+    public void CancelPiece()
+    {
+        if (active)
+        {
+            for (int i = 0; i < cubes.Length; i++)
+                if (cubes[i] != null) Destroy(cubes[i]);
+        }
+        active = false;
+        SoftDrop = false;
+    }
 
     public void HardDrop()
     {
@@ -90,7 +109,7 @@ public class PieceController : MonoBehaviour
         if (!IsValid(origin, cells))
         {
             active = false;
-            Debug.Log("Sem espaço para nova peça (fim de jogo neste lado).");
+            SpawnBlocked?.Invoke(activeGrid); // nenhuma peça é criada
             return;
         }
 
