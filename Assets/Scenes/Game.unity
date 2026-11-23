@@ -475,6 +475,56 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &644214290
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 644214292}
+  - component: {fileID: 644214291}
+  m_Layer: 0
+  m_Name: SideStateManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &644214291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644214290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0feda52d95dec743ae6a4c0fa552f67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SideStateManager
+  OnSideGameOver:
+    m_PersistentCalls:
+      m_Calls: []
+  OnAllSidesGameOver:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!4 &644214292
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 644214290}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.71492, y: 5, z: -1.45991}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &654079892
 GameObject:
   m_ObjectHideFlags: 0
@@ -544,7 +594,9 @@ MonoBehaviour:
   pieceController: {fileID: 1748105924}
   rotationManager: {fileID: 159252982}
   layerChecker: {fileID: 352329070}
+  sideStateManager: {fileID: 644214291}
   clearDelay: 0.3
+  deadSideDelay: 0.6
 --- !u!4 &721544733
 Transform:
   m_ObjectHideFlags: 0
@@ -702,12 +754,86 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e50ace2b3cb9ebe4cb6c2bc6a7cab2ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TouchControls
-  pieceController: {fileID: 1748105924}
-  moveStep: 0.08
-  dropSwipe: 0.12
-  tapMaxMove: 0.03
+  stepInches: 0.3
+  tapMaxInches: 0.1
   tapMaxTime: 0.25
-  holdTime: 0.35
+  flickMinInches: 0.6
+  flickMaxTime: 0.25
+  OnMoveLeft:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1748105924}
+        m_TargetAssemblyTypeName: PieceController, Assembly-CSharp
+        m_MethodName: MoveLeft
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnMoveRight:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1748105924}
+        m_TargetAssemblyTypeName: PieceController, Assembly-CSharp
+        m_MethodName: MoveRight
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnSoftDropHeld:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1748105924}
+        m_TargetAssemblyTypeName: PieceController, Assembly-CSharp
+        m_MethodName: set_SoftDrop
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnRotate:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1748105924}
+        m_TargetAssemblyTypeName: PieceController, Assembly-CSharp
+        m_MethodName: RotateCW
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  OnHardDrop:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1748105924}
+        m_TargetAssemblyTypeName: PieceController, Assembly-CSharp
+        m_MethodName: HardDrop
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!4 &938692482
 Transform:
   m_ObjectHideFlags: 0
@@ -1131,3 +1257,4 @@ SceneRoots:
   - {fileID: 721544733}
   - {fileID: 352329071}
   - {fileID: 938692482}
+  - {fileID: 644214292}

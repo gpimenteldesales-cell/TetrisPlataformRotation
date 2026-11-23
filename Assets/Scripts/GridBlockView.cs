@@ -38,6 +38,15 @@ public class GridBlockView : MonoBehaviour
         blocks[cell] = block;
         SetBlockCell(block, cell);
     }
+
+    // Usado no reinício: destrói todos os blocos fixados deste lado.
+    public void ClearAll()
+    {
+        foreach (GameObject block in blocks.Values)
+            if (block != null) Destroy(block);
+        blocks.Clear();
+    }
+
     public void RemoveRow(int y, int z)
     {
         GridData data = grid.Data;
