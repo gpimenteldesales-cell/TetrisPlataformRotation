@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -63,6 +64,11 @@ public class GameManager : MonoBehaviour
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
 
         pieceController.BeginPiece(grids[0]);
+    }
+
+    public void MenuButton()
+    {
+        SceneManager.LoadScene("Menu");
     }
 
     private void OnPieceLocked(GridManager grid)
