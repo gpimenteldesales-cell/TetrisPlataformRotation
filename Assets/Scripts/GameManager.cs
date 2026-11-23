@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -11,6 +10,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private RotationManager rotationManager;
     [SerializeField] private LayerChecker layerChecker;
     [SerializeField] private SideStateManager sideStateManager;
+    [Tooltip("Opcional: se ficar vazio, o jogo roda sem som.")]
+    [SerializeField] private AudioManager audioManager;
 
     [Header("Interface")]
     [Tooltip("Painel mostrado quando todos os lados acabam (pode ficar vazio).")]
@@ -37,6 +38,7 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (audioManager != null) audioManager.PlayGameplayMusic();
         pieceController.BeginPiece(grids[rotationManager.ActiveIndex]);
     }
 
@@ -62,17 +64,18 @@ public class GameManager : MonoBehaviour
 
         sideStateManager.ResetAll();
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (audioManager != null)
+        {
+            audioManager.PlayButtonClick();
+            audioManager.PlayGameplayMusic();
+        }
 
         pieceController.BeginPiece(grids[0]);
     }
 
-    public void MenuButton()
-    {
-        SceneManager.LoadScene("Menu");
-    }
-
     private void OnPieceLocked(GridManager grid)
     {
+        if (audioManager != null) audioManager.PlayPieceLanded();
         StartCoroutine(AfterLock(grid));
     }
 
@@ -82,6 +85,7 @@ public class GameManager : MonoBehaviour
         if (cleared > 0)
         {
             Debug.Log($"Linhas removidas: {cleared}");
+            if (audioManager != null) audioManager.PlayLineClear();
             yield return new WaitForSeconds(clearDelay);
         }
         GoToNextAliveSide();
@@ -111,6 +115,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("GAME OVER: todos os lados acabaram.");
             if (gameOverPanel != null) gameOverPanel.SetActive(true);
+            if (audioManager != null) audioManager.PlayMenuMusic();
             return;
         }
 
