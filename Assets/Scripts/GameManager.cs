@@ -1,6 +1,8 @@
 using System.Collections;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,6 +23,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float clearDelay = 0.3f;
     [SerializeField] private float deadSideDelay = 0.6f;
 
+    public void Menu()
+    {
+        SceneManager.LoadScene("Menu");
+    }
     private void OnEnable()
     {
         pieceController.PieceLocked += OnPieceLocked;
